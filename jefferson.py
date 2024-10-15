@@ -5,7 +5,6 @@ import string
 pygame.mixer.quit()
 pygame.init()
 
-# Константы
 WIDTH, HEIGHT = 800, 600
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Шифр Джефферсона")
@@ -20,6 +19,10 @@ FONT = pygame.font.SysFont('Courier', 36)
 
 class JeffersonCipher:
     def __init__(self, disk_count=7):
+        '''
+        Инициализирует шифр с заданным количеством дисков.
+        Каждый диск представляет собой случайно сгенерированную последовательность букв.
+        '''
         self.disk_count = disk_count
         self.disks = [self.generate_disk() for _ in range(disk_count)]
         self.current_positions = [0] * disk_count
@@ -32,22 +35,40 @@ class JeffersonCipher:
 
     @staticmethod
     def generate_disk():
+        '''
+        Генерирует случайную последовательность букв (диск) для шифра.
+        Через random перемешиваются буквы в каждом диске (от A до Z).
+        '''
         return ''.join(random.sample(string.ascii_uppercase, len(string.ascii_uppercase)))
 
     def get_disk_letter(self, disk_index, offset):
+        '''
+        Возвращает текущую букву на диске с учетом смещения.
+        Используется при отображении дисков в окне.
+        '''
         pos = (self.current_positions[disk_index] + offset) % len(string.ascii_uppercase)
         return self.disks[disk_index][pos]
 
     def move(self, direction, all_disks=False):
+        '''
+        Отвечает за перемещение дисков по полю (либо один диск, либо весь ряд).
+        '''
         if all_disks:
             self.current_positions = [(pos + direction) % len(string.ascii_uppercase) for pos in self.current_positions]
         else:
             self.current_positions[self.disk_order[self.selected_disk]] = (self.current_positions[self.disk_order[self.selected_disk]] + direction) % len(string.ascii_uppercase)
 
     def change_disk_selection(self, delta):
+        '''
+        Меняет выбранный диск в зависимости от нажатия стрелок влево или вправо.
+        '''
         self.selected_disk = (self.selected_disk + delta) % self.disk_count
 
     def start_drag(self, mouse_x):
+        '''
+        Начинает процесс перетаскивания диска с помощью мыши.
+        Определяет, какой диск выбран для перетаскивания.
+        '''
         disk_width = WIDTH // self.disk_count - 30
         for i, disk_index in enumerate(self.disk_order):
             if 50 + i * (disk_width + 20) <= mouse_x <= 50 + i * (disk_width + 20) + disk_width:
@@ -58,6 +79,10 @@ class JeffersonCipher:
         self.dragging_disk = None
 
     def drag(self, mouse_x):
+        '''
+        Перетаскивает выбранный диск в новую позицию.
+        Позволяет менять местами диски путем перетаскивания.
+        '''
         if self.dragging_disk is not None:
             disk_width = WIDTH // self.disk_count - 30
             new_index = max(0, min((mouse_x - 50) // (disk_width + 20), self.disk_count - 1))
@@ -67,11 +92,21 @@ class JeffersonCipher:
                 self.disk_order.insert(new_index, self.disk_order.pop(old_index))
 
     def encrypt(self):
+        '''
+        Зашифровывает сообщение, используя текущие позиции дисков.
+        Создает строку из символов, которые находятся в текущей строке выбранных дисков.
+        Сохраняет порядок дисков для последующего декодирования.
+        Ну или же если тупо - то записывает и выводит текущую позицию букв на основной строке.
+        '''
         self.encrypted_message = ''.join(self.disks[self.disk_order[i]][self.current_positions[self.disk_order[i]]] for i in range(self.disk_count))
         self.encrypted_order = ', '.join(str(self.disk_order[i]) for i in range(self.disk_count))
         return self.encrypted_message, self.encrypted_order
 
 def draw_window(cipher):
+    '''
+    Функция draw_window отвечает за отображение текущего состояния шифра на экране.
+    Она отрисовывает диски, текущие позиции букв, а также зашифрованное сообщение и порядок дисков.
+    '''
     WINDOW.fill(BACKGROUND_COLOR)
 
     for i in range(cipher.disk_count):
@@ -92,8 +127,7 @@ def draw_window(cipher):
 
         disk_number_text = FONT.render(str(cipher.disk_order[i]), True, TEXT_COLOR)
         WINDOW.blit(disk_number_text, (x_pos + disk_width // 2 - disk_number_text.get_width() // 2, y_pos - 40))
-
-        # Рисуем линию
+        
         line_surface = pygame.Surface((disk_width - 20, 4), pygame.SRCALPHA)
         line_surface.fill((*LINE_COLOR, LINE_ALPHA))
         WINDOW.blit(line_surface, (x_pos + 10, y_pos + 90 + text.get_height() // 2))
@@ -115,10 +149,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
+            # Обработка событий клавиш
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_TAB:
-                    cipher.tab_pressed = True
+                    cipher.tab_pressed = not cipher.tab_pressed
                 if event.key == pygame.K_UP:
                     cipher.move(-1, all_disks=cipher.tab_pressed)
                 elif event.key == pygame.K_DOWN:
@@ -129,7 +163,7 @@ def main():
                     cipher.change_disk_selection(1)
                 elif event.key == pygame.K_RETURN:
                     cipher.encrypt()
-
+            # Обработка событий мыши
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = event.pos
                 if HEIGHT // 2 - 100 <= mouse_y <= HEIGHT // 2 + 100:
